@@ -60,7 +60,7 @@ def savn_val(
 
     if model_to_open is not None:
         saved_state = torch.load(
-            model_to_open, map_location=lambda storage, loc: storage
+            model_to_open#, map_location=lambda storage, loc: storage
         )
         shared_model.load_state_dict(saved_state)
 

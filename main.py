@@ -25,8 +25,6 @@ os.environ["OMP_NUM_THREADS"] = "1"
 def main():
     args = flag_parser.parse_arguments()
 
-    args.model = 'SAVN'
-    #args.workers = 1
 
     if args.model == "BaseModel" or args.model == "GCN":
         args.learned_loss = False

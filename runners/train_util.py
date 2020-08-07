@@ -194,6 +194,7 @@ def get_bucketed_metrics(spl, best_path_length, success):
 def compute_spl(player, start_state):
 
     best = float("inf")
+    
     for obj_id in player.episode.task_data:
         try:
             _, best_path_len, _ = player.environment.controller.shortest_path_to_target(
@@ -204,11 +205,14 @@ def compute_spl(player, start_state):
         except:
             # This is due to a rare known bug.
             continue
+    #print(player.success,best,player.eps_len)
 
     if not player.success:
+        #print('spl=0')
         return 0, best
 
     if best < float("inf"):
+        #print('spl=',best / float(player.eps_len))
         return best / float(player.eps_len), best
 
     # This is due to a rare known bug.
