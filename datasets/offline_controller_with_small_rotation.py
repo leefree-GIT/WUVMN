@@ -78,7 +78,7 @@ class OfflineControllerWithSmallRotationEvent:
     """ A stripped down version of an event. Only contains lastActionSuccess, sceneName,
         and optionally state and frame. Does not contain the rest of the metadata. """
 
-    def __init__(self, last_action_success, scene_name, state=None, frame=None):
+    def __init__(self, last_action_success, scene_name, state=None, frame=None, score=None):
         self.metadata = {
             "lastActionSuccess": last_action_success,
             "sceneName": scene_name,
@@ -93,6 +93,7 @@ class OfflineControllerWithSmallRotationEvent:
             }
             self.metadata["agent"]["cameraHorizon"] = state.horizon
         self.frame = frame
+        self.score = score
 
 
 class OfflineControllerWithSmallRotation(BaseController):
@@ -131,10 +132,12 @@ class OfflineControllerWithSmallRotation(BaseController):
         self.graph_file_name = graph_file_name
         self.metadata_file_name = metadata_file_name
         self.images_file_name = images_file_name
+        self.scores_file_name = 'resnet50_score.hdf5'
         self.grid = None
         self.graph = None
         self.metadata = None
         self.images = None
+        self.scores = None
         self.using_raw_metadata = True
         self.actions = actions
         # Allowed rotations.
@@ -215,6 +218,15 @@ class OfflineControllerWithSmallRotation(BaseController):
             self.images = self.h5py.File(
                 os.path.join(
                     self.offline_data_dir, self.scene_name, self.images_file_name
+                ),
+                "r",
+            )
+
+            if self.scores is not None:
+                self.scores.close()
+            self.scores = self.h5py.File(
+                os.path.join(
+                    self.offline_data_dir, self.scene_name, self.scores_file_name
                 ),
                 "r",
             )
@@ -359,11 +371,14 @@ class OfflineControllerWithSmallRotation(BaseController):
 
     def _successful_event(self):
         return OfflineControllerWithSmallRotationEvent(
-            self.last_action_success, self.scene_name, self.state, self.get_image()
+            self.last_action_success, self.scene_name, self.state, self.get_image(), self.get_score()
         )
 
     def get_image(self):
         return self.images[str(self.state)][:]
+
+    def get_score(self):
+        return self.scores[str(self.state)][:]
 
     def all_objects(self):
         if self.using_raw_metadata:

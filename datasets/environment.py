@@ -46,6 +46,10 @@ class Environment:
         return self.controller.last_event.frame
 
     @property
+    def current_score(self):
+        return self.controller.last_event.score
+
+    @property
     def last_event(self):
         return self.controller.last_event
 

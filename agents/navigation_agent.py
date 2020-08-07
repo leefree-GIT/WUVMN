@@ -28,6 +28,7 @@ class NavigationAgent(ThorAgent):
             model_input.state = self.state()
         else:
             model_input.state = self.episode.current_frame
+        model_input.score = self.score()
         model_input.hidden = self.hidden
         model_input.target_class_embedding = self.episode.glove_embedding
         model_input.action_probs = self.last_action_probs
@@ -61,6 +62,9 @@ class NavigationAgent(ThorAgent):
 
     def state(self):
         return self.preprocess_frame(self.episode.state_for_agent())
+
+    def score(self):
+        return self.preprocess_frame(self.episode.score_for_agent())
 
     def exit(self):
         pass

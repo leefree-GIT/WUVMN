@@ -2,24 +2,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .gcn_model import GCN
-from utils.net_utils import weights_init, norm_col_init
+from utils.net_util import norm_col_init, weights_init
+from .model_io import ModelOutput
 class GcnBaseModel(torch.nn.Module):
-    """LSTM的隐藏状态不能由model自己来管理因为在a2c里一个模型会用于跑多个epi，不同的epi
-    的隐藏状态不同"""
-    def __init__(
-        self,
-        action_sz,
-        target_sz = 300,
-        dropout_rate = 0.25,
-        ):
+    def __init__(self, args):
+        action_space = args.action_space
+        target_embedding_sz = args.glove_dim
+        resnet_embedding_sz = args.hidden_state_sz
+        hidden_state_sz = args.hidden_state_sz
         resnet_embedding_sz = 512
         hidden_state_sz = 512
         super(GcnBaseModel, self).__init__()
 
         self.conv1 = nn.Conv2d(resnet_embedding_sz, 64, 1)
         self.maxp1 = nn.MaxPool2d(2, 2)
-        self.embed_glove = nn.Linear(target_sz, 64)
-        self.embed_action = nn.Linear(action_sz, 10)
+        self.embed_glove = nn.Linear(target_embedding_sz, 64)
+        self.embed_action = nn.Linear(action_space, 10)
 
         # GCN layer
         self.gcn_size = 64
@@ -34,7 +32,7 @@ class GcnBaseModel(torch.nn.Module):
 
         self.hidden_state_sz = hidden_state_sz
         self.lstm = nn.LSTMCell(lstm_input_sz, hidden_state_sz)
-        num_outputs = action_sz
+        num_outputs = action_space
         self.critic_linear = nn.Linear(hidden_state_sz, 1)
         self.actor_linear = nn.Linear(hidden_state_sz, num_outputs)
 
@@ -55,11 +53,13 @@ class GcnBaseModel(torch.nn.Module):
 
         #self.action_predict_linear = nn.Linear(2 * lstm_input_sz, action_sz)
 
-        self.dropout = nn.Dropout(p=dropout_rate)
+        self.dropout = nn.Dropout(p=args.dropout_rate)
 
     def embedding(self, state, score, target, action_probs, params = None):
 
         action_embedding_input = action_probs
+        state.unsqueeze_(0)
+        score.unsqueeze_(0)
 
         if params is None:
             glove_embedding = F.relu(self.embed_glove(target))
@@ -167,50 +167,31 @@ class GcnBaseModel(torch.nn.Module):
 
         return actor_out, critic_out, (hx, cx)
 
-    def forward(self, model_input, params = None):
+    def forward(self, model_input, model_options):
 
-        state = model_input['res18fm']
-        (hx, cx) = model_input['hidden']
+        state = model_input.state
+        (hx, cx) = model_input.hidden
 
-        target = model_input['glove']
+        target = model_input.target_class_embedding
 
-        action_probs = model_input['action_probs']
+        action_probs = model_input.action_probs
 
-        res_score = model_input['score']
+        res_score = model_input.score
+
+        params = model_options.params
 
         x, _ = self.embedding(state, res_score, target, action_probs, params)
         actor_out, critic_out, (hx, cx) = self.a3clstm(x, (hx, cx), params)
 
-        return dict(
-            policy=actor_out,
-            value=critic_out,
-            hidden=(hx, cx),
-            )
-        # ModelOutput(
+        # return dict(
+        #     policy=actor_out,
         #     value=critic_out,
-        #     logit=actor_out,
         #     hidden=(hx, cx),
-        #     embedding=image_embedding,
-        # )
-if __name__ == "__main__":
-    model = GcnBaseModel(3)
-    input_ = {
-        'res18fm':torch.randn(4,512,7,7),
-        'score':torch.randn(4,1000),
-        'action_probs':torch.randn(4,3),
-        'hidden':(torch.randn(4,512), torch.randn(4,512)),
-        'glove':torch.randn(4,300)
-    }
-    
-    cc = {}
-    for name, param in model.named_parameters():
-        # Clone and detach.
-        param_copied = param.clone().detach().requires_grad_(True)
-        cc[name] = param_copied
-    out = model.forward(input_)
-    print(out['value'])
-    #out['value'].mean().backward()
-    #out = model.forward(input_)
-    #print(out['value'])
-    out = model.forward(input_, cc)
-    print(out['value'])
+        #     )
+        return ModelOutput(
+            value=critic_out,
+            logit=actor_out,
+            hidden=(hx, cx),
+            embedding=None,
+        )
+

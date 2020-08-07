@@ -8,12 +8,6 @@ import numpy as np
 import scipy.sparse as sp
 from torch.nn.parameter import Parameter
 
-#有几个问题
-#resnet50直接从图像跑，太慢了
-#稀疏矩阵乘法的速度
-#target的全连接层是300x300
-
-
 class ScenePriorsModel(nn.Module):
     """Scene Priors implementation"""
     def __init__(

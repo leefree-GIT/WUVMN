@@ -54,6 +54,9 @@ class BasicEpisode(Episode):
     def state_for_agent(self):
         return self.environment.current_frame
 
+    def score_for_agent(self):
+        return self.environment.current_score
+
     def current_agent_position(self):
         """ Get the current position of the agent in the scene. """
         return self.environment.current_agent_position
